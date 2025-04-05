@@ -67,9 +67,8 @@ export async function POST(
 
     // Trouver le receiverId (l'autre participant)
     const receiverId = conversation.participants.find(
-      (participant: mongoose.Types.ObjectId | string) => 
-        participant.toString() !== senderId
-    )?.toString();
+      (p: mongoose.Types.ObjectId | string) => p.toString() !== senderId
+    );
 
     if (!receiverId) {
       return NextResponse.json(
