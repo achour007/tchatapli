@@ -15,13 +15,13 @@ declare global {
   var mongoose: CachedConnection | undefined;
 }
 
-let cached: CachedConnection = global.mongoose || { conn: null, promise: null };
+let cached = global.mongoose || { conn: null, promise: null };
 
 if (!global.mongoose) {
   global.mongoose = cached;
 }
 
-async function connectDB() {
+async function dbConnect() {
   if (cached.conn) {
     return cached.conn;
   }
@@ -29,9 +29,18 @@ async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      maxPoolSize: 10,
+      minPoolSize: 5,
+      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 5000,
+      heartbeatFrequencyMS: 10000,
+      retryWrites: true,
+      retryReads: true,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts);
+    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+      return mongoose;
+    });
   }
 
   try {
@@ -44,4 +53,4 @@ async function connectDB() {
   return cached.conn;
 }
 
-export default connectDB; 
+export default dbConnect; 
