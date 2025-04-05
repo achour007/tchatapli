@@ -1,8 +1,21 @@
 import { NextResponse } from 'next/server';
-import { initSocket } from '@/app/utils/socket';
+import { Server } from 'socket.io';
 
-export async function GET(req: Request) {
-  const response = NextResponse.next();
-  initSocket(response as any);
-  return response;
-} 
+declare global {
+  var io: Server | undefined;
+}
+
+const ioHandler = (req: Request) => {
+  if (!global.io) {
+    console.log('New Socket.io server...');
+    // @ts-ignore
+    global.io = new Server({
+      path: '/api/socket',
+      addTrailingSlash: false,
+    });
+  }
+  return NextResponse.json({ success: true });
+};
+
+export const GET = ioHandler;
+export const POST = ioHandler; 

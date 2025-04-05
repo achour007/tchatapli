@@ -1,21 +1,18 @@
-import { Server as NetServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { NextApiResponse } from 'next';
 
-export type NextApiResponseWithSocket = NextApiResponse & {
-  socket: {
-    server: NetServer & {
-      io?: SocketIOServer;
-    };
-  };
-};
+declare global {
+  var io: SocketIOServer | undefined;
+}
 
-export const initSocket = (res: NextApiResponseWithSocket) => {
-  if (!res.socket.server.io) {
-    const io = new SocketIOServer(res.socket.server);
-    res.socket.server.io = io;
+export const initSocket = () => {
+  if (!global.io) {
+    console.log('Initializing Socket.IO server...');
+    global.io = new SocketIOServer({
+      path: '/api/socket',
+      addTrailingSlash: false,
+    });
 
-    io.on('connection', (socket) => {
+    global.io.on('connection', (socket) => {
       console.log('Client connected');
 
       socket.on('join', (room: string) => {
@@ -24,7 +21,7 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
       });
 
       socket.on('message', (data: { room: string; message: string; user: string }) => {
-        io.to(data.room).emit('message', data);
+        global.io?.to(data.room).emit('message', data);
       });
 
       socket.on('disconnect', () => {
@@ -32,5 +29,5 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
       });
     });
   }
-  return res.socket.server.io;
+  return global.io;
 }; 

@@ -17,8 +17,11 @@ export default function ChatRoom() {
   const socketRef = useRef<Socket>();
 
   useEffect(() => {
-    // Initialisation de la connexion Socket.IO
-    socketRef.current = io();
+    // Initialisation de la connexion Socket.IO avec le chemin correct
+    socketRef.current = io({
+      path: '/api/socket',
+      addTrailingSlash: false,
+    });
 
     // Gestion des messages entrants
     socketRef.current.on('message', (data: Message) => {
