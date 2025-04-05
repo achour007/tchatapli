@@ -52,7 +52,8 @@ const conversationSchema = new mongoose.Schema({
 
 // Méthode pour vérifier si un utilisateur a déjà fait une demande de révélation
 conversationSchema.methods.hasRequestedReveal = function(userId: string): boolean {
-  return this.revealRequests.some((request: RevealRequest) => 
+  const requests: RevealRequest[] = this.revealRequests;
+  return requests.some((request: RevealRequest) => 
     request.requesterId.toString() === userId && 
     request.status === 'pending'
   );
