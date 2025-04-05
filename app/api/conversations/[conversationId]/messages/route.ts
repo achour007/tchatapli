@@ -13,42 +13,26 @@ export async function GET(
     await connectDB();
     const { conversationId } = params;
 
-    if (!conversationId) {
-      return NextResponse.json(
-        { message: 'ID de conversation requis' },
-        { status: 400 }
-      );
-    }
-
-    // Vérifier que la conversation existe
+    // Vérifier si la conversation existe
     const conversation = await ConversationModel.findById(conversationId);
     if (!conversation) {
       return NextResponse.json(
-        { message: 'Conversation non trouvée' },
+        { error: 'Conversation non trouvée' },
         { status: 404 }
       );
     }
 
     // Récupérer les messages avec pagination
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const skip = (page - 1) * limit;
-
     const messages = await MessageModel.find({ conversationId })
-      .sort({ timestamp: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('senderId', 'pseudo photo');
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .populate('senderId', 'pseudo');
 
-    return NextResponse.json(
-      messages.map(msg => msg.toMessageObject()),
-      { status: 200 }
-    );
+    return NextResponse.json(messages);
   } catch (error) {
     console.error('Erreur lors de la récupération des messages:', error);
     return NextResponse.json(
-      { message: 'Erreur serveur' },
+      { error: 'Erreur lors de la récupération des messages' },
       { status: 500 }
     );
   }
@@ -64,62 +48,56 @@ export async function POST(
     const { conversationId } = params;
     const { senderId, content } = await request.json();
 
-    if (!conversationId || !senderId || !content) {
-      return NextResponse.json(
-        { message: 'Données manquantes' },
-        { status: 400 }
-      );
-    }
-
-    // Vérifier que la conversation existe et récupérer ses détails
+    // Vérifier si la conversation existe
     const conversation = await ConversationModel.findById(conversationId);
     if (!conversation) {
       return NextResponse.json(
-        { message: 'Conversation non trouvée' },
+        { error: 'Conversation non trouvée' },
         { status: 404 }
       );
     }
 
-    // Vérifier que l'utilisateur fait partie de la conversation
-    if (!conversation.participants.includes(new mongoose.Types.ObjectId(senderId))) {
+    // Vérifier si l'utilisateur fait partie de la conversation
+    if (!conversation.participants.includes(senderId)) {
       return NextResponse.json(
-        { message: 'Utilisateur non autorisé' },
+        { error: 'Vous ne faites pas partie de cette conversation' },
         { status: 403 }
       );
     }
 
     // Trouver le receiverId (l'autre participant)
     const receiverId = conversation.participants.find(
-      p => p.toString() !== senderId
-    );
+      (participant: mongoose.Types.ObjectId | string) => 
+        participant.toString() !== senderId
+    )?.toString();
+
+    if (!receiverId) {
+      return NextResponse.json(
+        { error: 'Impossible de trouver le destinataire' },
+        { status: 400 }
+      );
+    }
 
     // Créer le nouveau message
-    const newMessage = new MessageModel({
-      content,
-      senderId: new mongoose.Types.ObjectId(senderId),
+    const message = await MessageModel.create({
+      conversationId,
+      senderId,
       receiverId,
-      conversationId: new mongoose.Types.ObjectId(conversationId),
-      isAnonymous: conversation.isAnonymous && conversation.initiatorId.toString() === senderId,
-      isInitialMessage: false
+      content,
     });
 
-    await newMessage.save();
-
     // Mettre à jour le dernier message de la conversation
-    conversation.lastMessage = newMessage._id;
+    conversation.lastMessage = message._id;
     await conversation.save();
 
-    // Retourner le message avec les informations de l'expéditeur
-    const populatedMessage = await newMessage.populate('senderId', 'pseudo photo');
+    // Populer le message avec les informations de l'expéditeur
+    await message.populate('senderId', 'pseudo');
 
-    return NextResponse.json(
-      populatedMessage.toMessageObject(),
-      { status: 201 }
-    );
+    return NextResponse.json(message, { status: 201 });
   } catch (error) {
-    console.error('Erreur lors de l\'envoi du message:', error);
+    console.error('Erreur lors de la création du message:', error);
     return NextResponse.json(
-      { message: 'Erreur serveur' },
+      { error: 'Erreur lors de la création du message' },
       { status: 500 }
     );
   }
