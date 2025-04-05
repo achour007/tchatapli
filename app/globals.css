@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #3B82F6;    /* Bleu principal */
+  --secondary-color: #60A5FA;  /* Bleu clair */
+  --accent-color: #2563EB;     /* Bleu accent */
+  --background-start: #F0F9FF; /* Fond bleu très clair */
+  --background-end: #E0F2FE;   /* Fond bleu très clair gradient */
+  --text-primary: #1E293B;     /* Texte foncé */
+  --text-secondary: #64748B;   /* Texte gris */
+  --success-color: #34D399;    /* Vert pour les succès */
+  --error-color: #EF4444;      /* Rouge pour les erreurs */
+  --chat-bubble: #EFF6FF;      /* Bulles de chat */
+  --chat-bubble-sent: #DBEAFE; /* Bulles de chat envoyées */
+}
+
+body {
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--background-start) 0%, var(--background-end) 100%);
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: -1;
+}
+
+@layer components {
+  .chat-input {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-xl
+           focus:ring-2 focus:ring-opacity-50 focus:border-[var(--primary-color)]
+           focus:ring-[var(--primary-color)] transition-all duration-300
+           bg-white shadow-sm hover:shadow-md;
+  }
+
+  .chat-button {
+    @apply px-6 py-3 rounded-xl font-medium text-white
+           transition-all duration-300 shadow-sm hover:shadow-md
+           bg-[var(--primary-color)] hover:bg-[var(--accent-color)]
+           active:scale-95;
+  }
+
+  .chat-card {
+    @apply bg-white rounded-xl shadow-md p-6
+           transition-all duration-300 hover:shadow-lg
+           border border-gray-100;
+  }
+
+  .chat-title {
+    @apply text-2xl font-semibold text-[var(--text-primary)]
+           relative inline-block;
+  }
+
+  .chat-section-title {
+    @apply text-lg font-medium text-[var(--text-primary)]
+           mb-4 relative inline-block;
+  }
+
+  .chat-tag {
+    @apply px-4 py-2 rounded-xl text-sm font-medium
+           transition-all duration-200;
+  }
+
+  .chat-tag.selected {
+    @apply bg-[var(--primary-color)] text-white shadow-sm;
+  }
+
+  .chat-tag.unselected {
+    @apply bg-[var(--chat-bubble)] text-[var(--text-primary)] 
+           hover:bg-[var(--chat-bubble-sent)];
+  }
+
+  .smooth-appear {
+    @apply opacity-0 animate-fadeIn;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .chat-input-file {
+    @apply hidden;
+  }
+
+  .chat-input-file + label {
+    @apply px-4 py-2 rounded-xl cursor-pointer
+           bg-[var(--chat-bubble)] text-[var(--text-primary)]
+           hover:bg-[var(--chat-bubble-sent)] transition-all duration-200
+           font-medium flex items-center gap-2;
+  }
+
+  .chat-avatar-container {
+    @apply relative w-24 h-24 rounded-xl overflow-hidden
+           bg-[var(--chat-bubble)] p-1;
+  }
+
+  .chat-avatar-inner {
+    @apply w-full h-full rounded-xl overflow-hidden bg-white;
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 8s ease infinite;
+  }
+
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+} 
