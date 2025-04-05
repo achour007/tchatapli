@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { MessageModel } from '@/app/models/Message';
-import { ConversationModel } from '@/app/models/Conversation';
+import ConversationModel from '@/app/models/Conversation';
 import connectDB from '@/app/lib/mongodb';
 import mongoose from 'mongoose';
 

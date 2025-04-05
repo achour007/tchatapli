@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ConversationModel } from '@/app/models/Conversation';
+import ConversationModel from '@/app/models/Conversation';
 import { MessageModel } from '@/app/models/Message';
 import connectDB from '@/app/lib/mongodb';
 import mongoose from 'mongoose';
@@ -13,27 +13,26 @@ export async function GET(request: Request) {
 
     if (!userId) {
       return NextResponse.json(
-        { message: 'ID utilisateur requis' },
+        { error: 'ID utilisateur requis' },
         { status: 400 }
       );
     }
 
-    // Récupérer les conversations avec le dernier message
+    // Récupérer les conversations de l'utilisateur
     const conversations = await ConversationModel.find({
       participants: userId
     })
-    .populate('lastMessage')
-    .populate('participants', 'pseudo photo')
-    .sort({ 'lastMessage.timestamp': -1 });
+      .sort({ updatedAt: -1 })
+      .populate('participants', 'pseudo photo')
+      .populate('lastMessage');
 
     return NextResponse.json(
-      conversations.map(conv => conv.toConversationObject()),
-      { status: 200 }
+      conversations.map(conv => conv.toConversation())
     );
   } catch (error) {
     console.error('Erreur lors de la récupération des conversations:', error);
     return NextResponse.json(
-      { message: 'Erreur serveur' },
+      { error: 'Erreur serveur' },
       { status: 500 }
     );
   }
@@ -43,62 +42,54 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await connectDB();
-    const { senderId, receiverId, initialMessage, isAnonymous = true } = await request.json();
+    const { senderId, receiverId, initialMessage } = await request.json();
 
     if (!senderId || !receiverId || !initialMessage) {
       return NextResponse.json(
-        { message: 'Données manquantes' },
+        { error: 'Tous les champs sont requis' },
         { status: 400 }
       );
     }
 
-    // Vérifier qu'une conversation n'existe pas déjà
+    // Vérifier si une conversation existe déjà
     const existingConversation = await ConversationModel.findOne({
       participants: { $all: [senderId, receiverId] }
     });
 
     if (existingConversation) {
       return NextResponse.json(
-        { message: 'Une conversation existe déjà entre ces utilisateurs' },
+        { error: 'Une conversation existe déjà' },
         { status: 400 }
       );
     }
 
-    // Créer la conversation
-    const conversation = new ConversationModel({
-      participants: [senderId, receiverId],
-      initiatorId: senderId,
-      isAnonymous
+    // Créer une nouvelle conversation
+    const conversation = await ConversationModel.create({
+      participants: [senderId, receiverId]
     });
 
-    // Créer le premier message
-    const message = new MessageModel({
-      content: initialMessage,
-      senderId: new mongoose.Types.ObjectId(senderId),
-      receiverId: new mongoose.Types.ObjectId(receiverId),
+    // Créer le message initial
+    const message = await MessageModel.create({
       conversationId: conversation._id,
-      isAnonymous,
-      isInitialMessage: true
+      senderId,
+      content: initialMessage,
+      isAnonymous: true
     });
 
-    // Sauvegarder le message et mettre à jour la conversation
-    await message.save();
+    // Mettre à jour la dernière conversation
     conversation.lastMessage = message._id;
     await conversation.save();
 
-    // Retourner la conversation avec le message
-    const populatedConversation = await conversation
-      .populate('lastMessage')
-      .populate('participants', 'pseudo photo');
+    // Récupérer la conversation avec les données populées
+    const populatedConversation = await ConversationModel.findById(conversation._id)
+      .populate('participants', 'pseudo photo')
+      .populate('lastMessage');
 
-    return NextResponse.json(
-      populatedConversation.toConversationObject(),
-      { status: 201 }
-    );
+    return NextResponse.json(populatedConversation?.toConversation());
   } catch (error) {
     console.error('Erreur lors de la création de la conversation:', error);
     return NextResponse.json(
-      { message: 'Erreur serveur' },
+      { error: 'Erreur serveur' },
       { status: 500 }
     );
   }
